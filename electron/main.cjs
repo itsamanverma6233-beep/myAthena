@@ -1,5 +1,6 @@
 const { BrowserWindow, app, ipcMain, screen } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 let win = null;
 
@@ -59,6 +60,18 @@ ipcMain.handle("get-time", () => {
 
 ipcMain.handle("is-test-active", () => {
   return Boolean(end_time && end_time > Date.now());
+});
+
+ipcMain.handle("save-photo", (_, arrayBuffer) => {
+  const feedDir = path.join(__dirname, "cameraFeed");
+  if (!fs.existsSync(feedDir)) {
+    fs.mkdirSync(feedDir, { recursive: true });
+  }
+  const fileName = `${Date.now()}.jpeg`;
+  const filePath = path.join(feedDir, fileName);
+  const buffer = Buffer.from(arrayBuffer);
+  fs.writeFileSync(filePath, buffer);
+  return filePath;
 });
 
 app.whenReady().then(() => {
