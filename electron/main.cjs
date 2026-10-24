@@ -40,6 +40,27 @@ ipcMain.handle("check-displays", () => {
   };
 });
 
+let end_time = null;
+let test_duration_minutes = 30;
+
+ipcMain.handle("start-test", (_, durationMinutes) => {
+  if (typeof durationMinutes === "number" && durationMinutes > 0) {
+    test_duration_minutes = durationMinutes;
+  }
+  end_time = Date.now() + test_duration_minutes * 60 * 1000;
+  return { startTime: Date.now(), endTime: end_time, durationMinutes: test_duration_minutes };
+});
+
+ipcMain.handle("get-time", () => {
+  if (!end_time) return 0;
+  const remaining = end_time - Date.now();
+  return remaining > 0 ? remaining : 0;
+});
+
+ipcMain.handle("is-test-active", () => {
+  return Boolean(end_time && end_time > Date.now());
+});
+
 app.whenReady().then(() => {
   createWindow();
 });
