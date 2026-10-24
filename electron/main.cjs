@@ -62,6 +62,38 @@ ipcMain.handle("is-test-active", () => {
   return Boolean(end_time && end_time > Date.now());
 });
 
+function appendAuditLog(entry) {
+  try {
+    const feedDir = path.join(__dirname, "cameraFeed");
+    if (!fs.existsSync(feedDir)) {
+      fs.mkdirSync(feedDir, { recursive: true });
+    }
+    const logPath = path.join(feedDir, "audit_log.json");
+    let logs = [];
+    if (fs.existsSync(logPath)) {
+      try {
+        logs = JSON.parse(fs.readFileSync(logPath, "utf-8"));
+      } catch {
+        logs = [];
+      }
+    }
+    const logRecord = {
+      timestamp: new Date().toISOString(),
+      ...entry,
+    };
+    logs.push(logRecord);
+    fs.writeFileSync(logPath, JSON.stringify(logs, null, 2));
+    return logRecord;
+  } catch (err) {
+    console.error("Failed to append audit log:", err);
+    return null;
+  }
+}
+
+ipcMain.handle("log-audit-event", (_, eventData) => {
+  return appendAuditLog(eventData);
+});
+
 ipcMain.handle("save-photo", (_, arrayBuffer) => {
   const feedDir = path.join(__dirname, "cameraFeed");
   if (!fs.existsSync(feedDir)) {
@@ -71,6 +103,7 @@ ipcMain.handle("save-photo", (_, arrayBuffer) => {
   const filePath = path.join(feedDir, fileName);
   const buffer = Buffer.from(arrayBuffer);
   fs.writeFileSync(filePath, buffer);
+  appendAuditLog({ type: "PHOTO_SNAPSHOT_CAPTURED", fileName });
   return filePath;
 });
 
