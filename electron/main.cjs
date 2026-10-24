@@ -1,4 +1,4 @@
-const { BrowserWindow, app, ipcMain } = require("electron");
+const { BrowserWindow, app, ipcMain, screen } = require("electron");
 const path = require("path");
 
 let win = null;
@@ -24,6 +24,20 @@ function createWindow() {
 
 ipcMain.handle("full-screen", () => {
   if (win) win.kiosk = true;
+});
+
+ipcMain.handle("check-displays", () => {
+  const displays = screen.getAllDisplays();
+  return {
+    count: displays.length,
+    isSingleDisplay: displays.length === 1,
+    displays: displays.map((d, index) => ({
+      id: d.id,
+      index: index + 1,
+      bounds: d.bounds,
+      isPrimary: d.id === screen.getPrimaryDisplay().id,
+    })),
+  };
 });
 
 app.whenReady().then(() => {
