@@ -1,4 +1,4 @@
-const { BrowserWindow, app } = require("electron");
+const { BrowserWindow, app, ipcMain } = require("electron");
 const path = require("path");
 
 let win = null;
@@ -21,6 +21,10 @@ function createWindow() {
     win.loadFile(path.join(__dirname, "../dist/index.html"));
   }
 }
+
+ipcMain.handle("full-screen", () => {
+  if (win) win.kiosk = true;
+});
 
 app.whenReady().then(() => {
   createWindow();
