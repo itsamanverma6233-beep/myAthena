@@ -21,6 +21,11 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
+  win.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+    console.error("Failed to load:", errorCode, errorDescription);
+  });
+
   // Disable right-click context menu
   win.webContents.on("context-menu", (e) => {
     e.preventDefault();
@@ -115,12 +120,18 @@ ipcMain.handle("show-rules", async () => {
   return res.response === 0;
 });
 
+function getCameraFeedDir() {
+  const baseDir = app.isPackaged ? app.getPath("userData") : __dirname;
+  const feedDir = path.join(baseDir, "cameraFeed");
+  if (!fs.existsSync(feedDir)) {
+    fs.mkdirSync(feedDir, { recursive: true });
+  }
+  return feedDir;
+}
+
 function appendAuditLog(entry) {
   try {
-    const feedDir = path.join(__dirname, "cameraFeed");
-    if (!fs.existsSync(feedDir)) {
-      fs.mkdirSync(feedDir, { recursive: true });
-    }
+    const feedDir = getCameraFeedDir();
     const logPath = path.join(feedDir, "audit_log.json");
     let logs = [];
     if (fs.existsSync(logPath)) {
@@ -148,10 +159,7 @@ ipcMain.handle("log-audit-event", (_, eventData) => {
 });
 
 ipcMain.handle("save-photo", (_, arrayBuffer) => {
-  const feedDir = path.join(__dirname, "cameraFeed");
-  if (!fs.existsSync(feedDir)) {
-    fs.mkdirSync(feedDir, { recursive: true });
-  }
+  const feedDir = getCameraFeedDir();
   const fileName = `${Date.now()}.jpeg`;
   const filePath = path.join(feedDir, fileName);
   const buffer = Buffer.from(arrayBuffer);
