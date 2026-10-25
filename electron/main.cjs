@@ -1,4 +1,4 @@
-const { BrowserWindow, app, ipcMain, screen } = require("electron");
+const { BrowserWindow, app, ipcMain, dialog, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -60,6 +60,26 @@ ipcMain.handle("get-time", () => {
 
 ipcMain.handle("is-test-active", () => {
   return Boolean(end_time && end_time > Date.now());
+});
+
+ipcMain.handle("show-rules", async () => {
+  const res = await dialog.showMessageBox(win, {
+    type: "info",
+    title: "Athena Exam Protocol & Rules",
+    message: "Please review and accept the examination rules:",
+    detail: [
+      "1. Camera & Microphone: Must remain enabled and unobstructed at all times.",
+      "2. Environment Lockdown: Fullscreen kiosk mode is strictly enforced.",
+      "3. Anti-Cheating: Window switching or loss of focus triggers violation strikes.",
+      "4. Integrity: Copy, paste, context menu, and external shortcuts are disabled.",
+      "5. Timer: Exam auto-submits when remaining time reaches 00:00:00."
+    ].join("\n\n"),
+    buttons: ["Accept & Begin Exam", "Cancel"],
+    defaultId: 0,
+    cancelId: 1,
+  });
+
+  return res.response === 0;
 });
 
 function appendAuditLog(entry) {
