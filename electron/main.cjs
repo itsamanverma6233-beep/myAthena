@@ -21,6 +21,39 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+  // Disable right-click context menu
+  win.webContents.on("context-menu", (e) => {
+    e.preventDefault();
+  });
+
+  // Block shortcut keys (DevTools, Reload, Print)
+  win.webContents.on("before-input-event", (event, input) => {
+    const isControlOrCmd = input.control || input.meta;
+
+    // Block DevTools: F12 or Ctrl+Shift+I / Cmd+Alt+I
+    if (input.key === "F12" || (isControlOrCmd && (input.shift || input.alt) && input.key.toLowerCase() === "i")) {
+      event.preventDefault();
+      return;
+    }
+
+    // Block Reload: F5 or Ctrl+R / Cmd+R
+    if (input.key === "F5" || (isControlOrCmd && input.key.toLowerCase() === "r")) {
+      event.preventDefault();
+      return;
+    }
+
+    // Block Print: Ctrl+P / Cmd+P
+    if (isControlOrCmd && input.key.toLowerCase() === "p") {
+      event.preventDefault();
+      return;
+    }
+  });
+
+  win.on("blur", () => {
+    if (end_time && end_time > Date.now()) {
+      win.webContents.send("window-blur-detected");
+    }
+  });
 }
 
 ipcMain.handle("full-screen", () => {
