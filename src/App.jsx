@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import MainExam from "./components/MainExam";
 
 function App() {
   const videoRef = useRef(null);
@@ -120,6 +121,7 @@ function App() {
   }
 
   async function startTest() {
+    // 1. Strict camera verification
     const hasActiveCamera =
       cameraReady &&
       videoRef.current &&
@@ -132,11 +134,13 @@ function App() {
       return;
     }
 
+    // 2. Microphone verification
     if (!audioReady) {
       setSetupError("Microphone verification required: Please click 'Enable Microphone' before proceeding.");
       return;
     }
 
+    // 3. Single monitor verification
     if (displayInfo && !displayInfo.isSingleDisplay) {
       setSetupError(`Multiple monitors detected (${displayInfo.count} displays). Please disconnect external monitors.`);
       return;
@@ -144,11 +148,13 @@ function App() {
 
     setSetupError(null);
 
+    // 4. Rules acceptance dialog
     const accepted = await window.electronAPI.showExamRules();
     if (!accepted) {
-      return;
+      return; // Cancelled by student
     }
 
+    // 5. Initialize test
     await window.electronAPI.startTest(30);
     if (window.electronAPI?.getRemainingTime) {
       const initialRemaining = await window.electronAPI.getRemainingTime();
@@ -165,16 +171,51 @@ function App() {
     setStarted(true);
   }
 
+  function formatTimeLeft(ms) {
+    if (!ms || ms <= 0) return "00:00:00";
+
+    const seconds = Math.floor((ms / 1000) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    const minutes = Math.floor((ms / (1000 * 60)) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    const hours = Math.floor(ms / (1000 * 60 * 60))
+      .toString()
+      .padStart(2, "0");
+
+    return `${hours}:${minutes}:${seconds}`;
+  }
+
   const hasActiveCamera = cameraReady && Boolean(videoRef.current?.srcObject);
   const isReadyToStart = hasActiveCamera && audioReady && displayInfo.isSingleDisplay;
 
   return (
     <div className="app-root">
-      {started ? (
-        <div style={{ padding: "40px", textAlign: "center" }}>
-          <h2>Exam Active</h2>
-          <p>Time remaining: {time}ms</p>
+      {/* Live Proctor Video PIP during active exam */}
+      {started && (
+        <div className="proctor-pip-badge">
+          <video ref={videoRef} autoPlay playsInline muted className="pip-video" />
+          <div className="pip-status-row">
+            <span className="pip-red-dot"></span>
+            <span className="pip-text">LIVE PROCTORING</span>
+          </div>
         </div>
+      )}
+
+      {started ? (
+        <MainExam
+          formattedTime={formatTimeLeft(time)}
+          remainingMs={time}
+          audioStream={audioStreamRef.current}
+          onEndTest={() => {
+            if (window.confirm("Are you sure you want to exit the exam?")) {
+              setStarted(false);
+            }
+          }}
+        />
       ) : (
         <div className="page-container">
           <header className="hero-header">
